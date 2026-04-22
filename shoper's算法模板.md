@@ -295,6 +295,149 @@ int ask(int x, int l, int r, int al, int ar) {
 } 
 ```
 
+#### 线段树二分
+
+```c++
+#include<bits/stdc++.h>
+#include<bits/extc++.h>
+#define int long long
+using namespace std;
+using namespace __gnu_pbds;
+using ll = long long;
+using ull = unsigned long long;
+using i128 = __int128;
+using arr2 = array<int, 2>;
+using arr3 = array<int, 3>;
+using arr4 = array<int, 4>;
+const int N = (int)5e4 + 9;
+const int M = (int)1e5 + 9;
+const int mod = (int)998244353;
+template<class T>
+using ordered_set = tree<
+    T,
+    null_type,
+    less<T>,
+    rb_tree_tag,
+    tree_order_statistics_node_update>;
+int n, m;
+struct ty {
+    int l, r, sum;
+}tr[4 * N];
+#define ls(x) (tr[x].l)
+#define rs(x) (tr[x].r)
+#define sum(x) (tr[x].sum)
+void pushup(int x) {
+    sum(x) = sum(ls(x)) + sum(rs(x));
+}
+void build(int x, int l, int r) {
+    if (l == r) {
+        sum(x) = 1;
+        return ;
+    }
+    ls(x) = x << 1;
+    rs(x) = x << 1 | 1;
+    int mid = l + (r - l) / 2;
+    build(ls(x), l, mid);
+    build(rs(x), mid + 1, r);
+    pushup(x);
+}
+void add(int x, int l, int r, int p, int v) {
+    if (l == r) {
+        sum(x) = v;
+        return ;
+    }
+    int mid = l + (r - l) / 2;
+    if (p <= mid) {
+        add(ls(x), l, mid, p, v);
+    }
+    else add(rs(x), mid + 1, r, p, v);
+    pushup(x);
+}
+int ask(int x, int l, int r, int al, int ar) {
+    if (al <= l && ar >= r) {
+        return sum(x);
+    }
+    int mid = l + (r - l) / 2;
+    int res = 0;
+    if (al <= mid) res += ask(ls(x), l, mid, al, ar);
+    if (ar > mid) res += ask(rs(x), mid + 1, r, al, ar);
+    return res; 
+}
+
+int askr(int x, int l, int r, int p) {
+    if (r < p) return -1;
+    if (l >= p && sum(x) == r - l + 1) return -1;
+    if (l == r) return l;
+    int mid = l + (r - l) / 2;
+    if (p <= mid) {
+        int res = askr(ls(x), l, mid, p);
+        if (res != -1) return res;
+    }
+    return askr(rs(x), mid + 1, r, p);
+}
+
+int askl(int x, int l, int r, int p) {
+    if (l > p) return -1;
+    if (r <= p && sum(x) == r - l + 1) return -1;
+    if (l == r) return l;
+    int mid = l + (r - l) / 2;
+    if (p >= mid + 1) {
+        int res = askl(rs(x), mid + 1, r, p);
+        if (res != -1) return res;
+    }
+    return askl(ls(x), l, mid, p);
+}
+
+void solve() {
+    cin >> n >> m;
+    build(1, 1, n);
+    stack<int> st;
+    for (int i = 1; i <= m; i++) {
+        char op;
+        cin >> op;
+        if (op == 'D') {
+            int x;
+            cin >> x;
+            st.push(x);
+            add(1, 1, n, x, 0);
+        }
+        else if (op == 'Q') {
+            int x;
+            cin >> x;
+            int ansr = askr(1, 1, n, x);
+            int ansl = askl(1, 1, n, x);
+            if (ansr == -1) ansr = n + 1;
+            if (ansl == -1) ansl = 0;
+            if (ansr == ansl) cout << "0\n";
+            else cout << ansr - ansl - 1 << "\n";
+        }   
+        else {
+            add(1, 1, n, st.top(), 1);
+            st.pop();
+        }
+    }
+}
+
+signed main()
+{
+    ios::sync_with_stdio(false);
+    cin.tie(0);
+    int _ = 1;
+    //cin >> _;
+    while(_--) {
+        solve();
+    }
+    return 0;
+}
+/*
+*   /\_/\
+*  (= ._.)
+*  / >  \>
+*/
+```
+
+
+
 #### 动态开点线段树
 
 ```c++

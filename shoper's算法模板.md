@@ -230,6 +230,23 @@ signed main()
  */
 ```
 
+### 分块
+
+```c++
+    int sq = sqrt(m);
+    int num = (m + sq - 1) / sq;
+    vector<int> st(num + 5), ed(num + 5), bel(m + 5);
+    for (int x = 1; x <= num; x++) {
+        st[x] = (x - 1) * sq + 1;
+        ed[x] = min(m, x * sq);
+    }
+    for (int x = 1; x <= num; x++) {
+        for (int i = st[x]; i <= ed[x]; i++) {
+            bel[i] = x;
+        }
+    }
+```
+
 ### 线段树
 
 #### 普通线段树

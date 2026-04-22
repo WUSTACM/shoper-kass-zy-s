@@ -925,6 +925,9 @@ int main() {
     }
     return 0;
 }
+
+//更快的哈希
+gp_hash_table<int, int> mp;
 ```
 
 ### FHQ-treap

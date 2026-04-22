@@ -2495,7 +2495,679 @@ i128 read128() {
 }
 ```
 
+## 东风夜放花千树
 
+### k 短路
+
+
+~~~C++
+void solve() {
+    int n, m, k;
+    cin >> n >> m >> k;
+    auto a = vv<int>(n + 5, 0);
+    vector<vector<arr2>>e(n + 5);
+    for (int i = 1; i <= m; i++) {
+    	int u, v, w;
+    	cin >> u >> v >> w;
+    	e[u].push_back({v, w});
+    }
+    priority_queue<arr2, vector<arr2>, greater<arr2>>q;
+    vector<priority_queue<int>>best(n + 5);
+    q.push({0, 1});
+    best[1].push(0);
+    while (!q.empty()) {
+    	auto [dist, u] = q.top(); q.pop();
+    	if ((int)best[u].size() == k && dist > best[u].top()) {
+    		continue;
+    	}
+    	for (auto [v, w] : e[u]) {
+    		int cost = dist + w;
+    		if ((int)best[v].size() < k) {
+    			best[v].push(cost);
+    			q.push({cost, v});
+    		}
+    		else if (best[v].top() > cost) {
+    			best[v].pop();
+    			best[v].push(cost);
+    			q.push({cost, v});
+    		}
+    	}
+    }
+    vector<int>ans;
+    while (!best[n].empty()) {
+    	ans.push_back(best[n].top());
+    	best[n].pop();
+    }
+    sort(ans.begin(), ans.end());
+    for (int i = 0; i < k; i++) {
+		cout << ans[i] << " \n"[i == k - 1];    	
+    }
+}
+
+~~~
+
+
+### LCA
+
+$n * logn$ 预处理， $O(1)$ 查询，卡常时用
+
+~~~C++
+int st[N][22];
+void solve() {
+    int n, q, s;
+    cin >> n >> q >> s;
+    vector<vector<int>>e(n + 5);
+    vector<int>deep(n + 5, 0), dfn(n + 5, 0), lg(n + 5, 0);
+    int time = 0;
+    for (int i = 1; i <= n - 1; i++) {
+        int u, v; cin >> u >> v;
+        e[u].push_back(v);
+        e[v].push_back(u);
+    }
+    lg[1] = 0;
+    for (int i = 2; i <= n; i++) {
+        lg[i] = lg[i / 2] + 1;
+    }
+    auto dfs =[&] (auto& dfs, int u, int from) -> void {
+        deep[u] = deep[from] + 1;
+        dfn[u] = ++time;
+        st[dfn[u]][0] = from;
+        for (int v : e[u]) {
+            if (v == from) continue;
+            dfs(dfs, v, u);
+        }
+    };
+    dfs(dfs, s, 0);
+    for (int j = 1; j <= 20; j++) {
+        for (int i = 1; i + (1 << j) - 1 <= n; i++) {
+            int u = st[i][j - 1], v = st[i + (1 << (j - 1))][j - 1];
+            st[i][j] = (dfn[u] < dfn[v] ? u : v);
+        }
+    }
+    auto LCA =[&] (int x, int y) -> int {
+        if (x == y) return x;
+        if (dfn[x] > dfn[y]) swap(x, y);
+        x = dfn[x]; y = dfn[y];
+        x++;
+        int k = lg[y - x + 1];
+        int u = st[x][k], v = st[y - (1 << k) + 1][k];
+        return dfn[u] < dfn[v] ? u : v;
+    };
+    while (q--) {
+        int x, y; cin >> x >> y;
+        cout << LCA(x, y) << '\n';
+    }
+
+}
+~~~
+
+
+
+
+### SCC
+
+~~~C++
+struct Tarjan{
+    int n, cnt, dfn;
+    stack<int>s;
+    vector<vector<int>>e;
+    vector<vector<int>>scc;
+    vector<int>num, low, id, sz;
+
+    Tarjan(int n){
+        this -> n = n;
+        this -> cnt = 0;
+        this -> dfn = 0;
+        e.resize(n + 3);
+        scc.resize(n + 3);
+        sz.assign(n + 2, 0);
+        num.assign(n + 2, 0);
+        low.assign(n + 2, 0);
+        id.assign(n + 2, 0);
+        for(int i = 1; i <= n; i++)e[i].clear();
+    }
+    
+    void dfs(int u){
+        s.push(u);
+        num[u] = low[u] = ++dfn;
+        for(auto v : e[u]){
+            if(!num[v]){
+                dfs(v);
+                low[u] = min(low[v], low[u]);
+            }
+            else if(!id[v]){
+                low[u] = min(low[u], num[v]);
+            }
+        }
+        if(low[u] == num[u]){
+            cnt++;
+            while(1){
+                int v = s.top(); s.pop();
+                id[v] = cnt;
+                scc[cnt].push_back(v);
+                sz[cnt]++;
+                if(u == v)break;
+            }
+        }
+
+    }
+
+    void Ta(){
+        for(int i = 1; i <= n; i++){
+            if(!num[i])dfs(i);
+        }
+    }
+
+};
+~~~
+
+
+### BCC
+
+~~~C++
+struct Tarjan {
+    int n, dfn, cnt, top;
+    vector<vector<int>> e, bcc;
+    vector<int> num, low, s, isc;
+
+    Tarjan(int n) {
+        this -> n = n;
+        this -> dfn = 0;
+        this -> cnt = 0;
+        this -> top = 0;
+        e.resize(n + 5);
+        bcc.resize(n + 5);
+        num.assign(n + 5, 0);
+        low.assign(n + 5, 0);
+        s.assign(n + 5, 0);
+        isc.assign(n + 5, 0);
+    }
+
+    void dfs(int u, int fa) {
+        num[u] = low[u] = ++dfn;
+        s[++top] = u;
+        int child = 0;
+        for (auto v : e[u]) {
+            if (!num[v]) {
+                child++;
+                dfs(v, u);
+                low[u] = min(low[u], low[v]);
+                if (low[v] >= num[u]) {
+                    isc[u] = 1;
+                    cnt++;
+                    int x;
+                    do {
+                        x = s[top--];
+                        bcc[cnt].push_back(x);
+                    } while (x != v);
+                    bcc[cnt].push_back(u);
+                }
+            } else if (v != fa) {
+                low[u] = min(low[u], num[v]);
+            }
+        }
+        if (fa == 0 && child == 0) {
+            bcc[++cnt].push_back(u);
+        }
+    }
+
+    void Ta() {
+        for (int i = 1; i <= n; i++) {
+            if (!num[i]) {
+                top = 0;
+                dfs(i, 0);
+            }
+        }
+    }
+};
+
+~~~
+
+
+### ECC
+
+~~~C++
+struct Tarjan{
+	int n, cnt, dfn;
+	stack<int>s;
+	vector<vector<int>>ecc;
+	vector<int>low, num, id;
+	vector<vector<arr2>>e;
+	
+	Tarjan(int n){
+		this -> n = n;
+		this -> cnt = 0;
+		this -> dfn = 0;
+		e.resize(n + 2);
+		ecc.resize(n + 2);
+		low.assign(n + 2, 0);
+		num.assign(n + 2, 0);
+		id.assign(n + 2, 0);
+		for(int i = 1; i <= n; i++)e[i].clear(), ecc[i].clear();
+	}
+	
+	void dfs(int u, int last){
+		low[u] = num[u] = ++dfn;
+		s.push(u);
+		for(auto [v, com] : e[u]){
+			if(com == (last ^ 1))continue;
+			if(!num[v]){
+				dfs(v, com);
+				low[u] = min(low[u], low[v]);
+			}
+			else low[u] = min(low[u], num[v]);
+		}
+		if(num[u] == low[u]){
+			vector<int>vec;
+			vec.push_back(u);
+			id[u] = ++cnt;
+			while(s.top() != u){
+				id[s.top()] = cnt;
+				vec.push_back(s.top()); s.pop(); 
+			}
+			s.pop();
+			ecc[cnt] = vec;
+		}
+
+	}
+
+	void Ta(){
+		for(int i = 1; i <= n; i++)if(!num[i])dfs(i, 0);
+	}
+
+};
+~~~
+
+
+### 欧拉路径，回路
+
+|**图类型**|**欧拉回路 (Eulerian Circuit) 存在条件**|**欧拉路径 (Eulerian Path) 存在条件**|
+|---|---|---|
+|**无向图 (Undirected Graph)**|所有顶点的度数均为偶数。|恰好有 $0$ 个或 $2$ 个奇数度的顶点。若有 $2$ 个，这两个必须分别为起点和终点。|
+|**有向图 (Directed Graph)**|所有顶点的入度 (In-degree) 等于出度 (Out-degree)。|恰好有一个顶点出度比入度大 $1$ (唯一起点)，恰好有一个顶点入度比出度大 $1$ (唯一终点)，其余所有顶点出度等于入度。或所有顶点出入度相等（退化为回路）。|
+
+无向图
+~~~C++
+void solve() {
+    int n, m;
+    cin >> n >> m;
+    vector<vector<arr2>>e(n + 5);
+    vector<int>head(n + 5, 0), vis(2 * m + 5, 0);
+    vector<int>du(n + 5, 0), path;
+    for (int i = 1; i <= m; i++) {
+    	int u, v; cin >> u >> v;
+    	e[u].push_back({v, i << 1});
+    	e[v].push_back({u, i << 1 | 1});
+    	du[u]++;
+    	du[v]++;
+    }
+    int cnt = 0, st = 0;
+    for (int i = 1; i <= n; i++) {
+    	if (du[i] % 2) {
+    		cnt++;
+    	}
+    }
+    if (cnt != 0 && cnt != 2) {
+    	cout << "IMPOSSIBLE" << '\n';
+    	return ;
+    }
+    if (!cnt) {
+    	for (int i = 1; i <= n; i++) {
+    		if (du[i] > 0) {
+    			st = i;
+    			break;
+    		}
+    	}
+    	if (!st) st = 1;
+    }
+    auto dfs =[&] (auto& dfs, int u) -> void {
+    	while (head[u] < e[u].size()) {
+    		auto [v, id] = e[u][head[u]++];
+    		if (vis[id]) continue;
+    		vis[id] = vis[id ^ 1] = 1;
+    		dfs(dfs, v);
+    	}
+    	path.push_back(u);
+    };
+    dfs(dfs, st);
+    if (path.size() != m + 1) {
+    	cout << "IMPOSSIBLE" << '\n';
+    	return ;
+    }
+    reverse(path.begin(), path.end());
+    for (int x : path) {
+    	cout << x << ' ';
+    }
+    cout << '\n';
+}
+~~~
+
+
+有向图
+~~~C++
+void solve() {
+    int n, m;
+    cin >> n >> m;
+    vector<vector<int>>e(n + 5);
+    vector<int>out(n + 5, 0), ru(n + 5, 0);
+    vector<int>path, head(n + 5, 0);
+
+    for (int i = 1; i <= m; i++) {
+    	int u, v; cin >> u >> v;
+    	e[u].push_back(v);
+    	ru[v]++;
+    	out[u]++;
+    }
+    bool f = 0;
+    int cnt1 = 0, cnt2 = 0, st = 0;
+    for (int i = 1; i <= n; i++) {
+    	if (abs(out[i] - ru[i]) > 1) {
+    		f = 1;
+    		break;
+    	}
+    	if (out[i] - ru[i] == 1) {
+    		cnt1++;
+    		st = i;
+    	}
+    	if (ru[i] - out[i] == 1) {
+    		cnt2++;
+    	}
+    }
+    if (f || !((cnt1 == 0 && cnt2 == 0) || (cnt1 == 1 && cnt2 == 1))) {
+    	cout << "IMPOSSIBLE" << '\n';
+    	return ;
+    }
+    if (!cnt1) {
+    	for (int i = 1; i <= n; i++) {
+    		if (out[i]) {
+    			st = i;
+    			break;
+    		}
+    	}
+    	if (!st) st = 1;
+   	}
+    auto dfs =[&] (auto& dfs, int u) -> void {
+    	while (head[u] < e[u].size()) {
+    		int v = e[u][head[u]++];
+    		dfs(dfs, v);
+    	}
+    	path.push_back(u);
+    };
+    dfs(dfs, 1);
+    if (path.size() != m + 1) {
+    	cout << "IMPOSSIBLE" << '\n';
+    	return ;
+    }
+    reverse(path.begin(), path.end());
+    for (int x : path) {
+    	cout << x << ' ';
+    }
+    cout << '\n';
+}
+~~~
+
+
+
+### 环计数
+
+#### [A Simple Task](https://codeforces.com/problemset/problem/11/D)
+
+~~~C++
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+// 预分配全局静态 DP 数组，优化内存分配开销，保障 Cache 命中率并防止栈溢出
+// 维度上限：dp[2^19][19]
+long long dp[1 << 19][19];
+
+int main() {
+    // 极限 I/O 性能优化
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    int n, m;
+    if (!(cin >> n >> m)) return 0;
+
+    vector<vector<bool>> adj(n, vector<bool>(n, false));
+    for (int i = 0; i < m; ++i) {
+        int u, v;
+        cin >> u >> v;
+        // 映射为 0-indexed，以严格对齐 Bitmask 掩码位
+        --u; --v;
+        adj[u][v] = true;
+        adj[v][u] = true;
+    }
+
+    // 初始化基础状态锚点：对于每一个单点集合，终点为该点自身的路径数记为 1
+    for (int i = 0; i < n; ++i) {
+        dp[1 << i][i] = 1;
+    }
+
+    long long total_closures = 0;
+    int max_mask = 1 << n;
+
+    for (int mask = 1; mask < max_mask; ++mask) {
+        // 硬件级指令提取最低位 1 的索引，获取路径原点
+        int start_node = __builtin_ctz(mask);
+
+        // 遍历当前子集中所有有效挂载的路径尾部节点
+        for (int i = 0; i < n; ++i) {
+            // 剪枝：如果当前位不在集合中或路径数为0
+            if (!(mask & (1 << i)) || dp[mask][i] == 0) continue;
+
+            // 尝试向未阻断的邻接点扩散
+            for (int next_node = 0; next_node < n; ++next_node) {
+                if (!adj[i][next_node]) continue;
+
+                // 核心去重断言：强制切断所有向编号小于起始点回流的路径
+                if (next_node < start_node) continue;
+
+                if (next_node == start_node) {
+                    // 触达起始点：记录有效闭合
+                    total_closures += dp[mask][i];
+                } else if (!(mask & (1 << next_node))) {
+                    // 状态衍生：确保扩展点是未曾访问过的新节点
+                    dp[mask | (1 << next_node)][next_node] += dp[mask][i];
+                }
+            }
+        }
+    }
+
+    // 剔除长度为 2 的伪环（总计 m 个），并除以 2 解决双向重复遍历
+    long long final_ans = (total_closures - m) / 2;
+    cout << final_ans << "\n";
+
+    return 0;
+}
+
+~~~
+
+
+#### [无向图三元环计数](https://www.luogu.com.cn/problem/P1989)
+
+~~~C++
+#include<bits/stdc++.h>
+using namespace std;
+using arr2 = array<int, 2>;
+
+void solve() {
+    int n, m;
+    cin >> n >> m;
+    vector<vector<int>>e(n + 5), adj(n + 5);
+    vector<int>du(n + 5);
+    vector<arr2>E(m + 5);
+    for (int i = 1; i <= m; i++) {
+        cin >> E[i][0] >> E[i][1];
+        du[E[i][0]]++; du[E[i][1]]++;
+    }
+    for (int i = 1; i <= m; i++) {
+        if ((du[E[i][0]] == du[E[i][1]] && E[i][0] < E[i][1]) || du[E[i][0]] < du[E[i][1]]) {
+            e[E[i][0]].push_back(E[i][1]);
+        }
+        else {
+            e[E[i][1]].push_back(E[i][0]);
+        }
+    }
+    int ans = 0;
+    vector<bool>vis(n + 5, 0);
+    for (int u = 1; u <= n; u++) {
+        for (int v : e[u]) vis[v] = 1;
+        for (int v : e[u]) {
+            for (int w : e[v]) {
+                if (vis[w]) ans++;
+            }
+        }
+        for (int v : e[u]) vis[v] = 0;
+    }
+    cout << ans << '\n';
+
+}
+
+int main() {
+	ios::sync_with_stdio(0);
+	cin.tie(0);
+	int _ = 1;
+	//cin >> _;
+	while (_--) {
+		solve();
+	}
+	return 0;
+}
+
+
+~~~
+
+
+#### [无向图四元环计数](https://loj.ac/p/191)
+
+~~~C++
+#include<bits/stdc++.h>
+using namespace std;
+using arr2 = array<int, 2>;
+
+void solve() {
+    int n, m;
+    cin >> n >> m;
+    vector<vector<int>>adj(n + 5), e(n + 5);
+    vector<int>du(n + 5);
+    for (int i = 1; i <= m; i++) {
+        int u, v; cin >> u >> v;
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+        du[u]++; du[v]++;
+    }
+    for (int i = 1; i <= n; i++) {
+        for (int v : adj[i]) {
+            if (du[i] < du[v] || (du[i] == du[v] && i < v)) {
+                e[i].push_back(v);
+            }
+        }
+    }
+    int ans = 0;
+    vector<int>cnt(n + 5, 0);
+    for (int u = 1; u <= n; u++) {
+        for (int v : adj[u]) {
+            for (int w : e[v]) {
+                if (du[w] > du[u] || (du[w] == du[u] && w > u)) {
+                    ans += cnt[w];
+                    cnt[w]++;
+                }
+            }
+        }
+        for (int v : adj[u]) {
+            for (int w : e[v]) {
+                cnt[w] = 0;
+            }
+        }
+    }
+    cout << ans << '\n';
+
+}
+
+int main() {
+	ios::sync_with_stdio(0);
+	cin.tie(0);
+	int _ = 1;
+	//cin >> _;
+	while (_--) {
+		solve();
+	}
+	return 0;
+}
+~~~
+
+#### 最小环
+
+~~~C++
+
+#include<bits/stdc++.h>
+using namespace std;
+using arr2 = array<int, 2>;
+
+
+int cnt = 0, path[120], pos[110][110];
+int dis[110][110], val[110][110];
+
+void get (int u, int v) {
+    if (!pos[u][v]) return ;
+    int k = pos[u][v];
+    get(u, k);
+    path[++cnt] = k;
+    get(k, v);
+};
+
+void solve() {
+    int n, m;
+    cin >> n >> m;
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= n; j++) {
+            dis[i][j] = 1e12;
+            val[i][j] = 1e12;
+        }
+        val[i][i] = 0;
+    }
+    for (int i = 1; i <= m; i++) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        val[u][v] = val[v][u] = min(val[u][v], w);
+    }
+    int ans = 0;
+    for (int k = 1; k <= n; k++) {
+        for (int i = 1; i <= n; i++) {
+            for (int j = 1; j <= n; j++) {
+                if (ans > val[i][k] + val[k][j] + dis[j][i]) {
+                    ans = val[i][k] + val[k][j] + dis[j][i];
+                    cnt = 0;
+                    path[++cnt] = i; path[++cnt] = k; path[++cnt] = j;
+                    get(j, i);
+                }
+            }
+        }
+        for (int i = 1; i <= n; i++) {
+            for (int j = 1; j <= n; j++) {
+                if (dis[i][j] > dis[i][k] + dis[k][j]) {
+                    dis[i][j] = dis[i][k] + dis[k][j];
+                    pos[i][j] = k;
+                }
+            }
+        }
+    }
+
+}
+
+int main() {
+	ios::sync_with_stdio(0);
+	cin.tie(0);
+	int _ = 1;
+	//cin >> _;
+	while (_--) {
+		solve();
+	}
+	return 0;
+}
+~~~
 
 
 

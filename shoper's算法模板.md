@@ -247,6 +247,121 @@ signed main()
     }
 ```
 
+### 普通莫队
+
+```c++
+#include<bits/stdc++.h>
+#include<bits/extc++.h>
+#define int long long
+using namespace std;
+using namespace __gnu_pbds;
+using ll = long long;
+using ull = unsigned long long;
+using i128 = __int128;
+using arr2 = array<int, 2>;
+using arr3 = array<int, 3>;
+using arr4 = array<int, 4>;
+const int N = (int)1e4 + 9;
+const int M = (int)1e6 + 9;
+const int mod = (int)998244353;
+template<class T>
+using ordered_set = tree<
+    T,
+    null_type,
+    less<T>,
+    rb_tree_tag,
+    tree_order_statistics_node_update>;
+
+
+void solve() {
+    int n, m, k;
+    cin >> n >> m >> k;
+    vector<int> a(n + 5);
+    for (int i = 1; i <= n; i++) {
+        cin >> a[i];
+    }
+    vector<arr3> q(m + 5);
+    for (int i = 1; i <= m; i++) {
+        cin >> q[i][0] >> q[i][1];
+        q[i][2] = i;
+    }
+    int sq = sqrt(n);
+    int num = (n + sq - 1) / sq;
+    vector<int> bel(n + 5), st(sq + 5), ed(sq + 5);
+    for (int x = 1; x <= num; x++) {
+        st[x] = (x - 1) * sq + 1;
+        ed[x] = min(n, x * sq);
+    }
+    for (int x = 1; x <= num; x++) {
+        for (int j = st[x]; j <= ed[x]; j++) {
+            bel[j] = x;
+        }
+    }
+
+    //比较器，左端点在分块中的位置; 右端点是原数组的位置！！！
+
+    auto cmp = [&](arr3 a, arr3 b) -> bool {
+        int xal = bel[a[0]], xbl = bel[b[0]];
+        if (xal == xbl) {
+            if (xal % 2) {
+                return a[1] < b[1];
+            }
+            else return a[1] > b[1];
+        }
+        return xal < xbl;
+    };  
+    vector<int> cnt(k + 5);
+    int ans = 0;
+    auto add = [&](int p) {
+        int x = a[p];
+        ans -= cnt[x] * cnt[x];
+        cnt[x]++;
+        ans += cnt[x] * cnt[x];
+    };
+    auto del = [&](int p) {
+        int x = a[p];
+        ans -= cnt[x] * cnt[x];
+        cnt[x]--;
+        ans += cnt[x] * cnt[x];
+    };
+    sort(q.begin() + 1, q.begin() + 1 + m, cmp);
+
+    //初始化固定！
+    
+    int l = 1, r = 0;
+    vector<arr2> res;
+    for (int i = 1; i <= m; i++) {
+        int al = q[i][0], ar = q[i][1];
+        while (l > al) add(--l);
+        while (r < ar) add(++r);
+        while (l < al) del(l++);
+        while (r > ar) del(r--);
+        res.push_back({q[i][2], ans});
+    }
+    sort(res.begin(), res.end());
+    for (auto [i, x] : res) cout << x << "\n";
+}
+
+signed main()
+{
+    ios::sync_with_stdio(false);
+    cin.tie(0);
+    int _ = 1;
+    // cin >> _;
+    while(_--) {
+        solve();
+    }
+    return 0;
+}
+/*
+*   /\_/\
+*  (= ._.)
+*  / >  \>
+*/
+```
+
+
+
 ### 线段树
 
 #### 普通线段树

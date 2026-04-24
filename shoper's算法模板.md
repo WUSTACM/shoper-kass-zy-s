@@ -2486,6 +2486,51 @@ int exgcd(int a, int b, int& x, int& y) {
 }
 ```
 
+### 矩阵快速幂
+
+~~~C++
+struct Matrix {
+    int n, m;
+    vector<vector<int>>a;
+
+    Matrix (int n, int m) {
+        init(n, m);
+    }
+
+    void init (int n, int m) {
+        this -> n = n;
+        this -> m = m;
+        a.assign(n + 5, vector<int>(m + 5, 0));
+    }
+};
+
+Matrix operator * (const Matrix A, const Matrix B){
+    Matrix ans(A.n, B.m);
+    for (int i = 0; i < A.n; i++) {
+        for (int j = 0; j < B.m; j++) {
+            for (int k = 0; k < A.m; k++) {
+                ans.a[i][j] = (ans.a[i][j] + A.a[i][k] * B.a[k][j]) % mod;
+            }
+        }
+    }
+    return ans;
+}
+
+Matrix qpow (Matrix res, int k) {
+    Matrix ans = res;
+    k--;
+    while (k) {
+        if(k & 1)ans = ans * res;
+        k >>= 1;
+        res = res * res;
+    }
+    return ans;
+}
+
+~~~
+
+
+
 ## 计算几何
 
 ### 极角排序
@@ -2502,6 +2547,174 @@ bool cmp(ty a, ty b) {
     return a.x * b.y - a.y * b.x > 0;
 }
 ```
+### 板子
+
+~~~C++
+using f64 = double;
+constexpr double eps = 1e-9;
+
+int sgn(double x) {
+    if (abs(x) < eps) return 0;
+    return x < 0 ? -1 : 1;
+}
+
+// ---------------- 终极全封装泛型点/向量 ----------------
+template <class T>
+struct Point {
+    T x, y;
+    Point(T _x = 0, T _y = 0) : x(_x), y(_y) {}
+
+    // 【基础重载】向量加减与缩放
+    Point operator+(const Point& p) const { return Point(x + p.x, y + p.y); }
+    Point operator-(const Point& p) const { return Point(x - p.x, y - p.y); }
+    Point operator*(const T& v) const { return Point(x * v, y * v); }
+    Point operator/(const T& v) const { return Point(x / v, y / v); }
+
+    // 【显式调用】点积与叉积
+    T dot(const Point& p) const { return x * p.x + y * p.y; }
+    T cross(const Point& p) const { return x * p.y - y * p.x; }
+    
+    // 【黑魔法重载】
+    // 标量点积: a * b 
+    T operator*(const Point& p) const { return dot(p); }
+    // 标量叉积: a ^ b (注意加括号)
+    T operator^(const Point& p) const { return cross(p); }
+
+    // 【距离与长度】
+    T dist2(const Point& p) const { return (*this - p) * (*this - p); }
+    double length() const { return hypot(x, y); }
+
+    // ================= 新增：高阶向量操作 =================
+    
+    // 1. 逆时针旋转 90 度 (极简技巧，纯整数域无损，常用于求法向量)
+    Point rot90() const { return Point(-y, x); }
+    
+    // 2. 顺时针旋转 90 度
+    Point rot90r() const { return Point(y, -x); }
+    
+    // 3. 逆时针旋转 rad 弧度 (不可避免会转为浮点数，强制返回 f64 的点)
+    Point<f64> rot(f64 rad) const {
+        return Point<f64>(x * cos(rad) - y * sin(rad), x * sin(rad) + y * cos(rad));
+    }
+    
+    // 4. 获取单位向量 (用于按固定长度延伸直线)
+    Point<f64> unit() const {
+        f64 l = length();
+        return Point<f64>(x / l, y / l);
+    }
+
+    // 【离散化比较】
+    bool operator<(const Point& p) const {
+        if constexpr (is_floating_point_v<T>) {
+            return sgn(x - p.x) == 0 ? sgn(y - p.y) < 0 : sgn(x - p.x) < 0;
+        } else {
+            return x == p.x ? y < p.y : x < p.x;
+        }
+    }
+    bool operator==(const Point& p) const {
+        if constexpr (is_floating_point_v<T>) {
+            return sgn(x - p.x) == 0 && sgn(y - p.y) == 0;
+        } else {
+            return x == p.x && y == p.y;
+        }
+    }
+};
+
+template <class T> using Vector = Point<T>;
+
+// ================= 新增：直线与线段操作 =================
+
+// 第一性原理：直线由一个点 p 和一个方向向量 v 构成 (P + tv)
+template <class T>
+struct Line {
+    Point<T> p, v;
+    Line() {}
+    Line(Point<T> p_, Point<T> v_) : p(p_), v(v_) {}
+    
+    // 极简生成器：利用直线上两点 a, b 生成直线
+    static Line make(Point<T> a, Point<T> b) { 
+        return Line(a, b - a); 
+    }
+};
+
+// 1. 判断点 p 是否在直线 l 上 (利用叉积判定共线)
+template <class T>
+bool onLine(Point<T> p, Line<T> l) {
+    return sgn((p - l.p) ^ l.v) == 0;
+}
+
+// 2. 判断点 p 是否在线段 ab 上 (极其重要：叉积为0且点积<=0)
+template <class T>
+bool onSeg(Point<T> p, Point<T> a, Point<T> b) {
+    // 叉积为0保证共线，点积<=0保证 p 在 a 和 b 的两端向量夹角 >= 180度(即在中间)
+    return sgn((p - a) ^ (p - b)) == 0 && sgn((p - a) * (p - b)) <= 0;
+}
+
+// 3. 求直线 a 和直线 b 的交点 (跨立实验，绝无除零风险，前提是 a.v ^ b.v != 0)
+// 强制使用 f64，因为交点必含小数
+Point<f64> inter(Line<f64> a, Line<f64> b) {
+    // t 为交点在直线 a 上的参数比例
+    f64 t = ((b.p - a.p) ^ b.v) / (a.v ^ b.v);
+    return a.p + a.v * t;
+}
+
+// 4. 求点 p 到直线 l 的投影点 (垂足)
+Point<f64> proj(Point<f64> p, Line<f64> l) {
+    // 利用点积求出 p 在方向向量 v 上的投影长度比例 t
+    f64 t = ((p - l.p) * l.v) / (l.v * l.v);
+    return l.p + l.v * t;
+}
+
+// ================= 面积整合 =================
+
+template <class T>
+T area(const vector<Point<T>>& poly) {
+    T res = 0;
+    int n = poly.size();
+    for (int i = 0; i < n; i++) {
+        res += (poly[i] ^ poly[(i + 1) % n]); 
+    }
+    return abs(res);
+}
+
+template <class T>
+double Area(const vector<Point<T>>& poly) {
+    return area(poly) / 2.0;
+}
+
+// ---------------- 实战演示 ----------------
+void solve() {
+    Point<int> A(0, 0), B(4, 0), C(2, 2);
+    
+    // 1. 快速构建直线 AB
+    auto L_AB = Line<int>::make(A, B);
+    
+    // 2. 求 C 到 AB 的法向量 (将 AB 的方向向量逆时针旋转 90 度)
+    Vector<int> normal = L_AB.v.rot90();
+    
+    // 3. 判断 C 是否在线段 AB 上
+    bool is_on = onSeg(C, A, B); // false
+    
+    // 4. 求两直线交点 (需要先将坐标转为 f64)
+    Line<f64> l1(Point<f64>(0,0), Point<f64>(1,1)); // y = x
+    Line<f64> l2(Point<f64>(0,2), Point<f64>(1,-1));// y = -x + 2
+    
+    // 求交点前，务必判断不平行
+    if (sgn(l1.v ^ l2.v) != 0) {
+        Point<f64> P = inter(l1, l2); // 结果为 (1.0, 1.0)
+    }
+    vector<Point<int>> poly = {
+        {0, 0}, {2, 0}, {2, 2}, {0, 2}
+    };
+
+    // 1. 如果只需要判定/比较，直接用 X2 版本 (结果是 8)
+    int area2 = area(poly);
+    // 2. 需要输出真实数值，再用浮点版本 (结果是 4.0)
+    f64 actual_area = Area(poly);
+}
+
+~~~
+
 
 ## 动态规划
 
@@ -3470,4 +3683,46 @@ int main() {
 	}
 	return 0;
 }
+~~~
+
+
+### 二分图
+
+~~~C++
+ll n, m, tmp;
+vector<int>e[N];
+vector<int>vis(N, 0), match(N, 0);
+
+bool dfs(int u){
+	for(int v : e[u]){
+		if(vis[v] == tmp)continue;
+		vis[v] = tmp;
+		if(!match[v] || dfs(match[v])){
+			match[v] = u;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+void solve(){
+	cin >> n >> m;
+	int u, v;
+	for(int i = 1; i <= m; i++){
+		cin >> u >> v;
+		e[u].push_back(v);
+	}
+	int ans = 0;
+	tmp = 0;
+	for(int i = 1; i <= n; i++){
+		tmp++;
+		ans += dfs(i);
+	}
+	cout << ans << '\n';
+	return ;
+
+
+}
+
+
 ~~~

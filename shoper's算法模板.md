@@ -3011,6 +3011,29 @@ i128 read128() {
 }
 ```
 
+### 快读
+
+```c++
+template <typename T>
+inline void read(T &x) {
+    x = 0;
+    T f = 1;
+    char ch = getchar();
+
+    while (ch < '0' || ch > '9') {
+        if (ch == '-') f = -1;
+        ch = getchar();
+    }
+
+    while (ch >= '0' && ch <= '9') {
+        x = x * 10 + ch - '0';
+        ch = getchar();
+    }
+
+    x *= f;
+}
+```
+
 ## 东风夜放花千树
 
 ### k 短路

@@ -86,6 +86,168 @@ int main() {
 
 ```
 
+```c++
+// 离散去重后，求rank值（有相同键也能处理）
+#include<bits/stdc++.h>
+#include<bits/extc++.h>
+#define int long long
+using namespace std;
+using namespace __gnu_pbds;
+using ll = long long;
+using ull = unsigned long long;
+using i128 = __int128;
+using arr2 = array<int, 2>;
+using arr3 = array<int, 3>;
+const int N = (int)1e7 + 9;
+const int M = (int)1e5 + 9;
+const int mod = (int)998244353;
+ll ksm(ll a, ll b, ll m=mod) {a %= m;ll res = 1;while (b > 0) {if (b & 1) res = res * a % m;a = a * a % m;b >>= 1;}return res;}
+int exgcd(int a,int b,int &x,int &y){if(b==0){x=1,y=0;return a;}int d=exgcd(b,a%b,x,y);int z=x;x=y;y=z-y*(a/b);return d;}
+int inv(int a,int p){int x,y;exgcd(a,p,x,y);return (x%p+p)%p;}
+template<class T>
+using ordered_set = tree<
+    T,
+    null_type,
+    less<T>,
+    rb_tree_tag,
+    tree_order_statistics_node_update>;
+
+class TR {
+private:
+    int n;
+    vector<int> tr;
+
+public: 
+    TR(int n) : n(n) {tr = vector<int>(n + 1, 0);}
+    int lowbit(int x) {return (x & (-x));}
+    void add(int x, int k) {
+        for (int i = x; i <= n; i += lowbit(i)) {
+            tr[i] += k;
+        }
+    }
+    ll ask(int x) {
+        ll ans = 0;
+        for (int i = x; i >= 1; i -= lowbit(i)) {
+            ans += tr[i];
+        }
+        return ans;
+    }
+    int rk(int x) {
+        int pos = 0;
+        int sp = 1;
+        while ((sp << 1) <= n) sp <<= 1;
+        for (; sp; sp >>= 1) {
+            int nxt = pos + sp;
+            if (nxt <= n && tr[nxt] < x) {
+                pos = nxt;
+                x -= tr[nxt];
+            }
+        }
+        return pos + 1;
+    }
+};
+
+void solve() {
+    int n;
+    cin >> n;
+    vector<arr2> a(n + 5);
+    vector<int> b;
+    for (int i = 1; i <= n; i++) {
+        char op;
+        cin >> op;
+        if (op == 'F') {
+            int x;
+            cin >> x;
+            a[i][0] = 0;
+            a[i][1] = x;
+            b.push_back(x);
+        }
+        else {
+            a[i][0] = 1;
+        }
+    } 
+    a[n + 1][0] = 1;
+    sort(b.begin(), b.end());
+    b.erase(unique(b.begin(), b.end()), b.end());
+    int m = b.size();
+    TR t1(m), t2(m);
+    auto getid = [&](int x) {
+        return (lower_bound(b.begin(), b.end(), x) - b.begin()) + 1;
+    };  
+    auto ist = [&](int x) {
+        int id = getid(x);
+        t1.add(id, 1);
+        t2.add(id, x);
+    };
+    // 求前k小值的和，能处理相同键
+    auto sum_mn = [&](int k) {
+        if (k <= 0) return 0ll;
+        int id = t1.rk(k);
+        int x = b[id - 1];
+        int cnt = t1.ask(id - 1);
+        int sum = t2.ask(id - 1);
+        int need = k - cnt;
+        return sum + need * x;
+    };
+    auto sum_num = [&](int num) {
+        int cnt = t1.ask(m);
+        int sumtotal = t2.ask(m);
+        num = min(cnt, num);
+        int k = cnt - num;
+        return sumtotal - sum_mn(k);
+    };
+    int ans = 0;
+    int l = 1;
+    while (l <= n + 1 && a[l][0] != 1) {
+        ist(a[l][1]);
+        l++;
+    }
+    if (l == n + 1) {
+        cout << "0\n";
+        return ;
+    }
+    int worker = 1;
+    for (int i = l + 1; i <= n + 1; i++) {
+        if (a[i][0] == 1) {
+            vector<int> tmp, pre(i - l + 2, 0);
+            for (int j = l + 1; j < i; j++) {
+                tmp.push_back(a[j][1] * (i - j));
+            }
+            sort(tmp.rbegin(), tmp.rend());
+            for (int j = 1; j <= tmp.size(); j++) {
+                pre[j] = pre[j - 1] + tmp[j - 1];
+            }
+            int res = 0;
+            for (int j = 0; j <= (int)tmp.size(); j++) {
+                if (j > worker) break;
+                res = max(res, pre[j] + (sum_num(worker - j)) * (i - l));
+            }
+            ans += res;
+            worker++;
+            for (int j = l + 1; j < i; j++) {
+                ist(a[j][1]);
+            }
+            l = i;
+        }
+    }
+    cout << ans << "\n";
+}
+
+signed main()
+{
+    ios::sync_with_stdio(false);
+    cin.tie(0);
+    int _ = 1;
+    cin >> _;
+    while(_--) {
+        solve();
+    }
+    return 0;
+}
+```
+
+
+
 ### ST表
 
 ```c++
@@ -229,6 +391,26 @@ signed main()
  *  / >  \>
  */
 ```
+
+
+
+### 笛卡尔树
+
+```c++
+int top = 0;
+vector<int> ls(n + 5), rs(n + 5);
+vector<int> st(n + 5);
+for (int i = 1; i <= n; i++) {
+    int k = top;
+    while (k && a[i] <= a[st[k]]) k--;
+    if (k) rs[st[k]] = i;
+    if (k < top) ls[i] = st[k + 1];
+    st[++k] = i;
+    top = k;
+}
+```
+
+
 
 ### 分块
 
@@ -2484,6 +2666,32 @@ int exgcd(int a, int b, int& x, int& y) {
     y = x1 - (a / b) * y1;
     return g;
 }
+// 非递归
+int exgcd(int a, int b, int &x, int &y) {
+    int x0 = 1, y0 = 0;
+    int x1 = 0, y1 = 1;
+
+    while (b) {
+        int q = a / b;
+
+        int na = b;
+        int nb = a - q * b;
+        a = na;
+        b = nb;
+
+        int nx = x0 - q * x1;
+        int ny = y0 - q * y1;
+
+        x0 = x1;
+        y0 = y1;
+        x1 = nx;
+        y1 = ny;
+    }
+
+    x = x0;
+    y = y0;
+    return a;
+}
 ```
 
 ### 矩阵快速幂
@@ -2528,6 +2736,266 @@ Matrix qpow (Matrix res, int k) {
 }
 
 ~~~
+
+### 批量求逆元
+
+```c++
+//批量求逆元，但必须保证不出现 a[i] % mod == 0
+vector<int> batch_inv(vector<int> a, int mod) {
+    int n = (int)a.size() - 1;
+    vector<int> pre(n + 1), inva(n + 1);
+
+    pre[0] = 1;
+    for (int i = 1; i <= n; i++) {
+        pre[i] = 1ll * pre[i - 1] * a[i] % mod;
+    }
+
+    int inv_all = qpow(pre[n], mod - 2, mod);
+
+    for (int i = n; i >= 1; i--) {
+        inva[i] = 1ll * inv_all * pre[i - 1] % mod;
+        inv_all = 1ll * inv_all * a[i] % mod;
+    }
+
+    return inva;
+}
+
+
+
+//分段批量求逆元，跳过mod 0的情况
+void solve_segment_inv(vector<int>& a, vector<int>& inva, int l, int r, int mod) {
+    vector<int> pre(r - l + 2);
+    pre[0] = 1;
+
+    for (int i = l; i <= r; i++) {
+        pre[i - l + 1] = 1ll * pre[i - l] * a[i] % mod;
+    }
+
+    int inv_all = qpow(pre[r - l + 1], mod - 2, mod);
+
+    for (int i = r; i >= l; i--) {
+        inva[i] = 1ll * inv_all * pre[i - l] % mod;
+        inv_all = 1ll * inv_all * a[i] % mod;
+    }
+}
+
+vector<int> batch_inv_with_zero(vector<int> a, int mod) {
+    int n = (int)a.size() - 1;
+    vector<int> inva(n + 1, 0);
+
+    int i = 1;
+    while (i <= n) {
+        if (a[i] % mod == 0) {
+            i++;
+            continue;
+        }
+
+        int l = i;
+        while (i <= n && a[i] % mod != 0) i++;
+        int r = i - 1;
+
+        solve_segment_inv(a, inva, l, r, mod);
+    }
+
+    return inva;
+}
+```
+
+### CRT（中国剩余定理）
+
+```c++
+//互质CRT
+#include <bits/stdc++.h>
+using namespace std;
+
+using ll = long long;
+using i128 = __int128_t;
+
+ll exgcd(ll a, ll b, ll &x, ll &y) {
+    if (b == 0) {
+        x = 1;
+        y = 0;
+        return a;
+    }
+    ll x1, y1;
+    ll g = exgcd(b, a % b, x1, y1);
+    x = y1;
+    y = x1 - a / b * y1;
+    return g;
+}
+
+ll inv_mod(ll a, ll mod) {
+    ll x, y;
+    ll g = exgcd(a, mod, x, y);
+    // 互质 CRT 中 g 一定等于 1
+    x %= mod;
+    if (x < 0) x += mod;
+    return x;
+}
+
+// 合并：
+// x ≡ a mod m
+// x ≡ b mod n
+// 要求 gcd(m, n) = 1
+// 返回 x mod (m * n)
+ll crt_pair(ll a, ll m, ll b, ll n) {
+    ll inv = inv_mod(m % n, n);
+
+    i128 diff = (i128)b - a;
+    diff %= n;
+    if (diff < 0) diff += n;
+
+    i128 t = diff * inv % n;
+    i128 ans = (i128)a + (i128)m * t;
+    i128 mod = (i128)m * n;
+
+    ans %= mod;
+    if (ans < 0) ans += mod;
+
+    return (ll)ans;
+}
+
+
+//exCRT（非互质）
+#include <bits/stdc++.h>
+using namespace std;
+
+using ll = long long;
+using i128 = __int128_t;
+
+ll exgcd(ll a, ll b, ll &x, ll &y) {
+    if (b == 0) {
+        x = 1;
+        y = 0;
+        return a;
+    }
+    ll x1, y1;
+    ll g = exgcd(b, a % b, x1, y1);
+    x = y1;
+    y = x1 - a / b * y1;
+    return g;
+}
+
+ll norm_mod(i128 x, ll mod) {
+    x %= mod;
+    if (x < 0) x += mod;
+    return (ll)x;
+}
+
+// 合并：
+// x ≡ a mod m
+// x ≡ b mod n
+//
+// 返回 true 表示有解，并更新：
+// a = 合并后的余数
+// m = 合并后的模数 lcm(m, n)
+//
+// 返回 false 表示无解
+bool excrt_merge(ll &a, ll &m, ll b, ll n) {
+    ll x, y;
+    ll g = exgcd(m, n, x, y);
+
+    i128 diff = (i128)b - a;
+
+    if (diff % g != 0) {
+        return false;
+    }
+
+    ll n_div_g = n / g;
+
+    // 解：
+    // m / g * t ≡ (b - a) / g mod n / g
+    i128 t = (diff / g) % n_div_g;
+    t = t * x % n_div_g;
+
+    i128 new_mod = (i128)m / g * n;
+    i128 new_a = (i128)a + (i128)m * t;
+
+    a = norm_mod(new_a, (ll)new_mod);
+    m = (ll)new_mod;
+
+    return true;
+}
+```
+
+### lucas
+
+```c++
+// 组合数n,k<=1e18, mod < 1e6(mod必须是质数)
+// 单次查询组合数C(n, k) 时间复杂度是(log_p n)
+#include <bits/stdc++.h>
+using namespace std;
+
+using ll = long long;
+
+ll mod;
+
+ll qpow(ll a, ll b) {
+    ll res = 1;
+    a %= mod;
+    while (b) {
+        if (b & 1) res = res * a % mod;
+        a = a * a % mod;
+        b >>= 1;
+    }
+    return res;
+}
+
+vector<ll> fac, ifac;
+
+void init_comb(int p) {
+    mod = p;
+    fac.assign(p, 1);
+    ifac.assign(p, 1);
+
+    for (int i = 1; i < p; i++) {
+        fac[i] = fac[i - 1] * i % mod;
+    }
+
+    ifac[p - 1] = qpow(fac[p - 1], mod - 2);
+
+    for (int i = p - 1; i >= 1; i--) {
+        ifac[i - 1] = ifac[i] * i % mod;
+    }
+}
+
+ll C_small(ll n, ll k) {
+    if (k < 0 || k > n) return 0;
+    return fac[n] * ifac[k] % mod * ifac[n - k] % mod;
+}
+
+ll Lucas(ll n, ll k) {
+    if (k < 0 || k > n) return 0;
+
+    ll ans = 1;
+
+    while (n > 0 || k > 0) {
+        ll ni = n % mod;
+        ll ki = k % mod;
+
+        if (ki > ni) return 0;
+
+        ans = ans * C_small(ni, ki) % mod;
+
+        n /= mod;
+        k /= mod;
+    }
+
+    return ans;
+}
+
+int main() {
+    ll n, k;
+    int p;
+    cin >> n >> k >> p;
+
+    init_comb(p);
+
+    cout << Lucas(n, k) << '\n';
+
+    return 0;
+}
+```
 
 
 

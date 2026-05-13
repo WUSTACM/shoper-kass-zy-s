@@ -2881,6 +2881,54 @@ struct StringHash {
     }
 };
 ```
+### 字典树
+
+### 马拉车
+
+```cpp
+struct manacher {
+    vector<char> s;
+    int n;
+
+    manacher(string& ss) {
+        n = ss.size();
+        int k = 0;
+        s.push_back('$');
+        s.push_back('#');
+
+        for (int i = 0; i < n; i++) {
+            s.push_back(ss[i]);
+            s.push_back('#');
+        }
+        s.push_back('&');
+        n = s.size() - 1;
+    }
+
+    vector<int> run() {
+        int r = 0, c;
+        vector<int> p(n);
+        for (int i = 1; i < n; ++i) {
+            if (i < r) p[i] = min(r - i, p[2 * c - i]);
+            else p[i] = 1;
+
+            while (s[i + p[i]] == s[i - p[i]]) p[i]++;
+            if (i + p[i] > r) {
+                r = i + p[i];
+                c = i;
+            }
+        }
+        return p;
+    }
+};
+```
+
+
+
+### AC自动机
+
+### 回文树
+
+### 回文自动机
 
 ### kmp
 

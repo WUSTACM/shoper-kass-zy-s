@@ -3550,6 +3550,149 @@ inline void read(T &x) {
 }
 ```
 
+### 高精度
+
+```c++
+#include <bits/stdc++.h>
+using namespace std;
+
+// 非负高精度整数，低位在前，base = 1e4
+// 支持：读入、输出、比较、+、-、*int、/int、%int
+struct Big {
+    static const int base = 10000;
+    static const int width = 4;
+    vector<int> a;
+
+    Big(long long x = 0) { *this = x; }
+
+    Big& operator=(long long x) {
+        a.clear();
+        if (x == 0) return *this;
+        while (x) a.push_back(x % base), x /= base;
+        return *this;
+    }
+
+    Big(string s) { read(s); }
+
+    void trim() {
+        while (!a.empty() && a.back() == 0) a.pop_back();
+    }
+
+    void read(string s) {
+        a.clear();
+        for (int i = (int)s.size() - 1; i >= 0; i -= width) {
+            int x = 0;
+            int l = max(0, i - width + 1);
+            for (int j = l; j <= i; j++) x = x * 10 + s[j] - '0';
+            a.push_back(x);
+        }
+        trim();
+    }
+
+    friend istream& operator>>(istream& in, Big& x) {
+        string s;
+        in >> s;
+        x.read(s);
+        return in;
+    }
+
+    friend ostream& operator<<(ostream& out, const Big& x) {
+        if (x.a.empty()) return out << 0;
+        out << x.a.back();
+        for (int i = (int)x.a.size() - 2; i >= 0; i--)
+            out << setw(width) << setfill('0') << x.a[i];
+        return out;
+    }
+
+    friend bool operator<(const Big& x, const Big& y) {
+        if (x.a.size() != y.a.size()) return x.a.size() < y.a.size();
+        for (int i = (int)x.a.size() - 1; i >= 0; i--)
+            if (x.a[i] != y.a[i]) return x.a[i] < y.a[i];
+        return false;
+    }
+
+    friend bool operator==(const Big& x, const Big& y) {
+        return x.a == y.a;
+    }
+
+    friend Big operator+(const Big& x, const Big& y) {
+        Big z;
+        int n = max(x.a.size(), y.a.size()), carry = 0;
+        for (int i = 0; i < n || carry; i++) {
+            int cur = carry;
+            if (i < (int)x.a.size()) cur += x.a[i];
+            if (i < (int)y.a.size()) cur += y.a[i];
+            z.a.push_back(cur % Big::base);
+            carry = cur / Big::base;
+        }
+        return z;
+    }
+
+    // 要求 x >= y
+    friend Big operator-(const Big& x, const Big& y) {
+        Big z;
+        int borrow = 0;
+        for (int i = 0; i < (int)x.a.size(); i++) {
+            int cur = x.a[i] - borrow;
+            if (i < (int)y.a.size()) cur -= y.a[i];
+            if (cur < 0) cur += Big::base, borrow = 1;
+            else borrow = 0;
+            z.a.push_back(cur);
+        }
+        z.trim();
+        return z;
+    }
+
+    friend Big operator*(const Big& x, int m) {
+        Big z;
+        long long carry = 0;
+        for (int i = 0; i < (int)x.a.size() || carry; i++) {
+            long long cur = carry;
+            if (i < (int)x.a.size()) cur += 1LL * x.a[i] * m;
+            z.a.push_back(cur % Big::base);
+            carry = cur / Big::base;
+        }
+        z.trim();
+        return z;
+    }
+
+    friend Big operator/(const Big& x, int m) {
+        Big z;
+        z.a.resize(x.a.size());
+        long long r = 0;
+        for (int i = (int)x.a.size() - 1; i >= 0; i--) {
+            long long cur = r * Big::base + x.a[i];
+            z.a[i] = cur / m;
+            r = cur % m;
+        }
+        z.trim();
+        return z;
+    }
+
+    friend int operator%(const Big& x, int m) {
+        long long r = 0;
+        for (int i = (int)x.a.size() - 1; i >= 0; i--)
+            r = (r * Big::base + x.a[i]) % m;
+        return r;
+    }
+};
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    Big a, b;
+    cin >> a >> b;
+    cout << a + b << '
+';
+
+    return 0;
+}
+
+```
+
+
+
 ## 东风夜放花千树
 
 ### k 短路

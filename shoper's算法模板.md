@@ -3523,9 +3523,92 @@ struct StringHash {
     }
 };
 ```
+
+
 ### 字典树
 
-### 马拉车
+```cpp
+struct Trie {
+    struct node {
+        int pass;
+        int end;
+        int nxt[26]; //根据空间和需要维护的量更改
+        node() :pass(0), end(0), nxt{} {}
+    };
+    
+    int cnt = 0;
+    vector<node> tree;
+
+    Trie(int n) {
+        tree.assign(n + 10, node());
+    }
+
+    // 字符映射
+    int cal(char ch) { 
+        if (ch >= 'a' && ch <= 'z') {
+            return ch - 'a'; 
+        }
+        // else if() {}
+    }
+
+    // 插入字符
+    void insert(string& s) {
+        int p = 0;
+        tree[p].pass++;
+        for (auto ch : s) {
+            int c = cal(ch);
+            if (!tree[p].nxt[c]) {                
+                tree[p].nxt[c] = ++cnt;
+                tree[cnt] = node(); // 延迟清空
+            }
+            p = tree[p].nxt[c];
+            tree[p].pass++;
+        }
+        tree[p].end++;
+    }
+    
+    // 查找单个字符串
+    bool find(string& s) {
+        int p = 0;
+        for (auto ch : s) {
+            int c = cal(ch);
+            if (!tree[p].nxt[c]) {
+                return false;
+            }
+            p = tree[p].nxt[c];
+        }
+        return tree[p].end > 0;
+    }
+
+    // 清空单个字符串
+    bool erase(string& s) {
+        if (!find(s)) {
+            return false;
+        }    
+        int p = 0;    
+        tree[p].pass--;    
+        for (char ch : s) {
+            int c = cal(ch);    
+            p = tree[p].nxt[c];
+            tree[p].pass--;
+        }
+        tree[p].end--;    
+        return true;
+    }
+
+    // 初始化根节点加延迟清空O(1)做到整体清空
+    void clear() {
+        tree[0] = node();
+        cnt = 0;
+    }
+};
+
+Trie tr();
+```
+
+
+
+### manacher(马拉车
 
 ```cpp
 struct manacher {

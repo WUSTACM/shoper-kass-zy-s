@@ -3647,13 +3647,26 @@ struct manacher {
 };
 ```
 
-
-
 ### AC自动机
+
+```cpp
+```
+
+
 
 ### 回文树
 
+```cpp
+```
+
+
+
 ### 回文自动机
+
+```cpp
+```
+
+
 
 ### kmp
 
@@ -3755,6 +3768,41 @@ replace(s.begin(), s.end(), ',', ' '); // 逗号变空格
 ```
 
 ## 杂项
+
+### 运行配置
+
+终端命令:
+
+```bash
+cd ~/Documents
+mkdir contest
+mkdir contest/src
+mkdir contest/io
+cd contest
+touch run.sh
+touch io/in.txt
+touch io/out.txt
+```
+
+run.sh :
+
+```bash
+#/bin/bash
+
+g++ -std=c++23 src/$1.cpp -o main
+
+./main < io/in.txt > io/out.txt
+
+cat io/out.txt
+
+rm main
+```
+
+最后终端运行
+
+`chmod +x run.sh`
+
+
 
 ### int128
 

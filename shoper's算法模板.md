@@ -3395,6 +3395,193 @@ LL dfs(int pos, bool limit, int sum)
 }
 ```
 
+### 凸包优化dp
+
+```c++
+//加入直线的斜率 k 递增；查询点 x 递增
+#include <bits/stdc++.h>
+using namespace std;
+
+using ll = long long;
+using i128 = __int128_t;
+
+struct Line {
+    ll k, b;
+
+    ll value(ll x) const {
+        return k * x + b;
+    }
+};
+
+struct ConvexHullTrick {
+    deque<Line> q;
+
+    // 判断 b 是否被 a 和 c 淘汰
+    // 要求 a.k < b.k < c.k，维护最小值下凸壳
+    bool bad(const Line& a, const Line& b, const Line& c) {
+        return (i128)(a.b - b.b) * (c.k - b.k) >=
+               (i128)(b.b - c.b) * (b.k - a.k);
+    }
+
+    void add_line(ll k, ll b) {
+        Line nw = {k, b};
+
+        // 斜率相同，只保留截距更小的
+        if (!q.empty() && q.back().k == k) {
+            if (q.back().b <= b) return;
+            q.pop_back();
+        }
+
+        while (q.size() >= 2 && bad(q[q.size() - 2], q[q.size() - 1], nw)) {
+            q.pop_back();
+        }
+
+        q.push_back(nw);
+    }
+
+    ll query(ll x) {
+        while (q.size() >= 2 && q[0].value(x) >= q[1].value(x)) {
+            q.pop_front();
+        }
+        return q[0].value(x);
+    }
+};
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    /*
+        使用方式示例：
+
+        dp[i] = const_i + min_j { k_j * x_i + b_j }
+
+        ConvexHullTrick cht;
+        cht.add_line(k0, b0);
+
+        for (int i = 1; i <= n; i++) {
+            dp[i] = const_i + cht.query(x_i);
+            cht.add_line(k_i, b_i);
+        }
+
+        注意：
+        1. k_i 必须递增加入。
+        2. x_i 必须递增查询。
+        3. 如果是最大值，可以把 k 和 b 都取负，最后结果再取负。
+    */
+
+    return 0;
+}
+
+
+
+//斜率不单调；查询点不单调;动态加直线，动态查最小值；x 的范围已知。
+//李超线段树版本
+#include <bits/stdc++.h>
+using namespace std;
+
+using ll = long long;
+
+const ll INF = (1LL << 62);
+
+struct Line {
+    ll k, b;
+
+    Line(ll _k = 0, ll _b = INF) : k(_k), b(_b) {}
+
+    ll value(ll x) const {
+        if (b >= INF / 2) return INF;
+        return k * x + b;
+    }
+};
+
+struct LiChaoTree {
+    struct Node {
+        Line line;
+        Node* left;
+        Node* right;
+
+        Node() : line(), left(nullptr), right(nullptr) {}
+    };
+
+    ll X_MIN, X_MAX;
+    Node* root;
+
+    LiChaoTree(ll _X_MIN, ll _X_MAX) {
+        X_MIN = _X_MIN;
+        X_MAX = _X_MAX;
+        root = new Node();
+    }
+
+    void add_line(Line nw) {
+        add_line(root, X_MIN, X_MAX, nw);
+    }
+
+    ll query(ll x) {
+        return query(root, X_MIN, X_MAX, x);
+    }
+
+private:
+    void add_line(Node* node, ll l, ll r, Line nw) {
+        ll mid = (l + r) >> 1;
+
+        bool left_better = nw.value(l) < node->line.value(l);
+        bool mid_better = nw.value(mid) < node->line.value(mid);
+
+        if (mid_better) {
+            swap(nw, node->line);
+        }
+
+        if (l == r) return;
+
+        if (left_better != mid_better) {
+            if (!node->left) node->left = new Node();
+            add_line(node->left, l, mid, nw);
+        } else {
+            if (!node->right) node->right = new Node();
+            add_line(node->right, mid + 1, r, nw);
+        }
+    }
+
+    ll query(Node* node, ll l, ll r, ll x) {
+        if (!node) return INF;
+
+        ll res = node->line.value(x);
+
+        if (l == r) return res;
+
+        ll mid = (l + r) >> 1;
+
+        if (x <= mid) {
+            return min(res, query(node->left, l, mid, x));
+        } else {
+            return min(res, query(node->right, mid + 1, r, x));
+        }
+    }
+};
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    /*
+        使用方式示例：
+
+        LiChaoTree tree(-1000000000LL, 1000000000LL);
+
+        tree.add_line(Line(k, b));
+        ll ans = tree.query(x);
+
+        它维护的是最小值。
+        如果要求最大值，可以插入 Line(-k, -b)，查询后取负。
+    */
+
+    return 0;
+}
+```
+
+
+
 ## 字符串
 
 ### 字符串哈希

@@ -3989,6 +3989,38 @@ rm main
 
 `chmod +x run.sh`
 
+#### 双重哈希
+
+```cpp
+struct MyHash {
+    // 随机盐
+    static inline const uint64_t SEED = 
+        std::chrono::steady_clock::now().time_since_epoch().count();
+
+    // WyHash 搅拌机
+    static uint64_t mix(uint64_t x) {
+        x ^= SEED;
+        unsigned __int128 m = (unsigned __int128)x * 0xbf58476d1ce4e5b9ULL;
+        uint64_t a = (m >> 64) ^ m;
+        m = (unsigned __int128)a * 0x94d049bb133111ebULL;
+        return (m >> 64) ^ m;
+    }
+    
+    // ======== 对应的重载 ========
+    size_t operator()(uint64_t a) const noexcept {
+        return mix(a);
+    }
+
+    // size_t operator()(const arr3& a) const noexcept {
+    //     auto [x, y, z] = a;
+    //     uint64_t res = mix(x);
+    //     res = mix(res ^ y); // 把第二维的 y 揉进第一维的结果里
+    //     res = mix(res ^ z); // 把第三维的 z 揉进去
+    //     return res;
+    // }
+};
+```
+
 
 
 ### int128

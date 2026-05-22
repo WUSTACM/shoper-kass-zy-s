@@ -3989,7 +3989,7 @@ rm main
 
 `chmod +x run.sh`
 
-#### 双重哈希
+### 双重哈希
 
 ```cpp
 struct MyHash {
